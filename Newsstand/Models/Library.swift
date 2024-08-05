@@ -8,39 +8,56 @@
 import Foundation
 import Combine
 
-class Library: ObservableObject {
+class Library: ObservableObject, Identifiable {
     @Published var feeds: [Feed] = []
+    @Published var articles: [Article] = []
+    
+    @Published var addFeed: Feed?
+    @Published var editFeed: Feed?
+    
+    @Published var selectedFeed: Feed?
+    @Published var selectedArticle: Article?
+    
     private let userDefaultsKey = "savedFeeds"
 
     init() {
         load()
     }
 
-    private func load() {
-        if let savedFeeds = UserDefaults.standard.array(forKey: userDefaultsKey) as? [[String: String]] {
-            self.feeds = savedFeeds.compactMap { dict in
-                if let idString = dict["id"],
-                   let id = UUID(uuidString: idString),
-                   let name = dict["name"],
-                   let url = dict["url"] {
-                    return Feed(id: id, name: name, url: url)
-                }
-                return nil
+    func load() {
+        guard let feeds = UserDefaults.standard.array(forKey: userDefaultsKey) as? [[String: String]] else { return }
+        
+        self.feeds = feeds.compactMap { feed in
+            if let idString = feed["id"],
+               let id = UUID(uuidString: idString),
+               let name = feed["name"],
+               let url = feed["url"] {
+                return Feed(id: id, name: name, url: url)
             }
+            return nil
+        }
+    }
+    
+    func fetch() {
+        if let feed = self.selectedFeed {
+            var cancellables = Set<AnyCancellable>()
+            
+            RSSParser.fetchArticles(from: feed.url)
+                .receive(on: DispatchQueue.main)
+                .sink(receiveCompletion: { completion in
+                    if case .failure(let error) = completion {
+                        // Implement logic for fail in fetching articles
+                        print("Failed to fetch articles: \(error)")
+                    }
+                }, receiveValue: { articles in
+                    self.articles = articles
+                })
+                .store(in: &cancellables)
+        } else {
+            self.articles = []
         }
     }
 
-    private func save() {
-        let saveFeeds = feeds.map { feed in
-            [
-                "id": feed.id.uuidString,
-                "name": feed.name,
-                "url": feed.url
-            ]
-        }
-        UserDefaults.standard.set(saveFeeds, forKey: userDefaultsKey)
-    }
-    
     func add(_ addFeed: Feed) {
         DispatchQueue.main.async {
             self.feeds.append(addFeed)
@@ -56,7 +73,17 @@ class Library: ObservableObject {
             }
         }
     }
-    
+
+    func save() {
+        let saveFeeds = feeds.map { feed in [
+                "id": feed.id.uuidString,
+                "name": feed.name,
+                "url": feed.url
+        ]}
+        
+        UserDefaults.standard.set(saveFeeds, forKey: userDefaultsKey)
+    }
+
     func delete(at offsets: IndexSet) {
         DispatchQueue.main.async {
             self.feeds.remove(atOffsets: offsets)
@@ -65,9 +92,27 @@ class Library: ObservableObject {
     }
 
     func move(fromOffsets indices: IndexSet, toOffset newOffset: Int) {
-        DispatchQueue.main.async {
-            self.feeds.move(fromOffsets: indices, toOffset: newOffset)
-            self.save()
+        feeds.move(fromOffsets: indices, toOffset: newOffset)
+        save()
+    }
+    
+    func refresh() {
+        var cancellables = Set<AnyCancellable>()
+        
+        guard let selectedFeed = self.selectedFeed else {
+            print("No feed selected")
+            return
         }
+        
+        RSSParser.fetchArticles(from: selectedFeed.url)
+            .receive(on: DispatchQueue.main)
+            .sink(receiveCompletion: { completion in
+                if case .failure(let error) = completion {
+                    print("Failed to refresh feed \(selectedFeed.name): \(error)")
+                }
+            }, receiveValue: { newArticles in
+                self.articles = newArticles
+            })
+            .store(in: &cancellables)
     }
 }

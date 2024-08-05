@@ -11,7 +11,8 @@ struct AddFeedView: View {
     @EnvironmentObject var library: Library
     @Environment(\.dismiss) var dismiss
     
-    @State private var feedURL: String = ""
+    @State var feed: Feed
+
     @State private var isLoading: Bool = false
     @State private var errorMessage: String?
 
@@ -20,7 +21,7 @@ struct AddFeedView: View {
             VStack(alignment: .leading) {
                 Text("Feed:")
                 HStack {
-                    TextField("", text: $feedURL)
+                    TextField("", text: $feed.url)
                         .textFieldStyle(.squareBorder)
                         .frame(minWidth: 200)
                         .lineLimit(1)
@@ -49,9 +50,11 @@ struct AddFeedView: View {
                     }
                     .keyboardShortcut(.cancelAction)
                     
-                    Button("Add Feed") { add() }
-                        .disabled(feedURL.isEmpty || isLoading)
-                        .keyboardShortcut(.defaultAction)
+                    Button("Add Feed") {
+                        addFeed()
+                    }
+                    .disabled(feed.url.isEmpty)
+                    .keyboardShortcut(.defaultAction)
                 }
                 .padding([.top], 8)
                 .padding([.leading, .trailing, .bottom])
@@ -60,16 +63,16 @@ struct AddFeedView: View {
         .frame(minWidth: 480, maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func add() {
-        guard !feedURL.isEmpty else { return }
+    private func addFeed() {
+        guard !feed.url.isEmpty else { return }
         
         isLoading = true
         errorMessage = nil
         
-        fetchFeedName(from: feedURL) { result in
+        fetchFeedName(from: feed.url) { result in
             switch result {
             case .success(let name):
-                let newFeed = Feed(name: name, url: feedURL)
+                let newFeed = Feed(name: name, url: feed.url)
                 library.add(newFeed)
                 dismiss()
             case .failure(let error):
@@ -115,6 +118,11 @@ struct AddFeedView: View {
 }
 
 #Preview {
-    AddFeedView()
-        .environmentObject(Library())
+    let sampleFeed = Feed(
+        id: UUID(),
+        name: "",
+        url: ""
+    )
+    
+    return AddFeedView(feed: sampleFeed)
 }

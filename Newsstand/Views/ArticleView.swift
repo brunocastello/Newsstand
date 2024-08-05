@@ -9,6 +9,8 @@ import SwiftUI
 import WebKit
 
 struct ArticleView: View {
+    @EnvironmentObject var library: Library
+    
     let article: Article?
 
     var body: some View {
@@ -16,6 +18,13 @@ struct ArticleView: View {
             if let article = article {
                 WebView(url: URL(string: "about:blank")!, htmlContent: generateHTMLContent(for: article))
                     .edgesIgnoringSafeArea(.all)
+            } else if library.selectedFeed != nil {
+                Text("Select an article")
+                    .font(.title3)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .multilineTextAlignment(.center)
+                    .padding()
             }
         }
     }

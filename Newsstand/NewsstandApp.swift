@@ -9,9 +9,13 @@ import SwiftUI
 
 @main
 struct NewsstandApp: App {
+    
+    @StateObject var library = Library()
+    
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(library)
         }
     }
 }
