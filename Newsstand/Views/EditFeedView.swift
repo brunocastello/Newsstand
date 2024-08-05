@@ -1,0 +1,114 @@
+//
+//  EditFeedView.swift
+//  Newsstand
+//
+//  Created by Bruno Castelló on 04/08/24.
+//
+
+import SwiftUI
+
+struct EditFeedView: View {
+    @EnvironmentObject var library: Library
+    @Environment(\.dismiss) var dismiss
+    
+    @Binding var feed: Feed?
+    @State private var isLoading: Bool = false
+    @State private var errorMessage: String?
+
+    var body: some View {
+        VStack(spacing: 0) {
+            VStack(alignment: .leading) {
+                Text("Feed Name:")
+                HStack {
+                    TextField("", text: Binding(
+                        get: { feed?.name ?? "" },
+                        set: { newValue in
+                            if feed != nil {
+                                feed?.name = newValue
+                            }
+                        }
+                    ))
+                    .textFieldStyle(.squareBorder)
+                    .frame(minWidth: 200)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                }
+                .padding(.bottom, 8)
+
+                Text("Feed URL:")
+                HStack {
+                    TextField("", text: Binding(
+                        get: { feed?.url ?? "" },
+                        set: { newValue in
+                            if feed != nil {
+                                feed?.url = newValue
+                            }
+                        }
+                    ))
+                    .textFieldStyle(.squareBorder)
+                    .frame(minWidth: 200)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                }
+                .padding(.bottom, 8)
+
+                HStack {
+                    if let errorMessage = errorMessage {
+                        Text(errorMessage)
+                            .foregroundColor(.red)
+                    }
+                }
+            }
+            .padding()
+            
+            VStack {
+                Divider()
+                HStack {
+                    Spacer()
+                    
+                    Button(action: {
+                        dismiss()
+                    }) {
+                        Text("Cancel")
+                    }
+                    .keyboardShortcut(.cancelAction)
+                    
+                    Button("Save") { edit() }
+                        .disabled(feed?.name.isEmpty ?? true || feed?.url.isEmpty ?? true || isLoading)
+                        .keyboardShortcut(.defaultAction)
+                }
+                .padding([.top], 8)
+                .padding([.leading, .trailing, .bottom])
+            }
+        }
+        .frame(minWidth: 480, maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func edit() {
+        guard let feed = feed, !feed.name.isEmpty, !feed.url.isEmpty else { return }
+        
+        isLoading = true
+        errorMessage = nil
+        
+        library.edit(feed)
+        
+        dismiss()
+        isLoading = false
+    }
+}
+
+#Preview {
+    let sampleFeed = Feed(
+        id: UUID(),
+        name: "Sample Feed",
+        url: "https://www.sample.com/rss-feed.rss"
+    )
+    
+    let library = Library()
+    library.feeds = [sampleFeed]
+    
+    return EditFeedView(
+        feed: .constant(sampleFeed)
+    )
+    .environmentObject(library)
+}
