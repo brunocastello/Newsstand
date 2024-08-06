@@ -12,8 +12,6 @@ struct EditFeedView: View {
     @Environment(\.dismiss) var dismiss
     
     @State var feed: Feed
-    
-    @State private var isLoading: Bool = false
     @State private var errorMessage: String?
 
     var body: some View {
@@ -74,20 +72,12 @@ struct EditFeedView: View {
     }
     
     private func editFeed() {
-        isLoading = true
         errorMessage = nil
         library.edit(feed)
         dismiss()
-        isLoading = false
     }
 }
 
 #Preview {
-    let sampleFeed = Feed(
-        id: UUID(),
-        name: "Sample Feed",
-        url: "https://www.sample.com/rss-feed.rss"
-    )
-    
-    return EditFeedView(feed: sampleFeed)
+    return EditFeedView(feed: Feed())
 }

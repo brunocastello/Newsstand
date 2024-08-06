@@ -9,24 +9,10 @@ import SwiftUI
 
 struct FeedView: View {
     @EnvironmentObject var library: Library
-    
-    @State private var searchQuery: String = ""
-    
-    var filteredArticles: [Article] {
-        if searchQuery.isEmpty {
-            return library.articles
-        } else {
-            return library.articles.filter { article in
-                article.title.localizedCaseInsensitiveContains(searchQuery) ||
-                article.description.localizedCaseInsensitiveContains(searchQuery) ||
-                article.categories?.contains(where: { $0.localizedCaseInsensitiveContains(searchQuery) }) == true
-            }
-        }
-    }
 
     var body: some View {
         if library.selectedFeed != nil {
-            List(filteredArticles, id: \.id) { article in
+            List(library.filteredArticles, id: \.id) { article in
                 NavigationLink(
                     value: article
                 ) {
@@ -46,11 +32,11 @@ struct FeedView: View {
                     .padding(EdgeInsets(top: 5, leading: 5, bottom: 8, trailing: 5))
                 }
             }
-            .searchable(text: $searchQuery)
+            .searchable(text: $library.searchQuery)
             .toolbar {
                 ToolbarItem(placement: .navigation) {
                     Button(action: {
-                        library.refresh()
+                        library.refreshArticles()
                     }) {
                         Label("Refresh Feed", systemImage: "arrow.clockwise")
                     }

@@ -12,8 +12,6 @@ struct AddFeedView: View {
     @Environment(\.dismiss) var dismiss
     
     @State var feed: Feed
-
-    @State private var isLoading: Bool = false
     @State private var errorMessage: String?
 
     var body: some View {
@@ -66,7 +64,6 @@ struct AddFeedView: View {
     private func addFeed() {
         guard !feed.url.isEmpty else { return }
         
-        isLoading = true
         errorMessage = nil
         
         fetchFeedName(from: feed.url) { result in
@@ -78,31 +75,37 @@ struct AddFeedView: View {
             case .failure(let error):
                 errorMessage = error.localizedDescription
             }
-            
-            isLoading = false
         }
     }
 
     private func fetchFeedName(from url: String, completion: @escaping (Result<String, Error>) -> Void) {
         guard let feedURL = URL(string: url) else {
-            completion(.failure(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])))
+            DispatchQueue.main.async {
+                completion(.failure(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])))
+            }
             return
         }
         
         URLSession.shared.dataTask(with: feedURL) { data, response, error in
             if let error = error {
-                completion(.failure(error))
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
                 return
             }
             
             guard let data = data,
                   let xmlString = String(data: data, encoding: .utf8),
                   let name = extractFeedName(from: xmlString) else {
-                completion(.failure(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: "Unable to parse feed"])))
+                DispatchQueue.main.async {
+                    completion(.failure(NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: "Unable to parse feed"])))
+                }
                 return
             }
             
-            completion(.success(name))
+            DispatchQueue.main.async {
+                completion(.success(name))
+            }
         }
         .resume()
     }
@@ -118,11 +121,5 @@ struct AddFeedView: View {
 }
 
 #Preview {
-    let sampleFeed = Feed(
-        id: UUID(),
-        name: "",
-        url: ""
-    )
-    
-    return AddFeedView(feed: sampleFeed)
+   return AddFeedView(feed: Feed())
 }

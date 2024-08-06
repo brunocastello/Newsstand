@@ -6,11 +6,9 @@
 //
 
 import SwiftUI
-import Combine
 
 struct SidebarView: View {
     @EnvironmentObject var library: Library
-    @State private var cancellables = Set<AnyCancellable>()
 
     var body: some View {
         List(selection: $library.selectedFeed) {
@@ -38,13 +36,7 @@ struct SidebarView: View {
                         }
                         Divider()
                         Button(action: {
-                            if let index = library.feeds.firstIndex(of: feed) {
-                                library.delete(at: IndexSet(integer: index))
-                                if library.selectedFeed == feed {
-                                    library.selectedFeed = nil
-                                    library.selectedArticle = nil
-                                }
-                            }
+                            library.delete(feed: feed)
                         }) {
                             Text("Delete Feed")
                         }
@@ -60,20 +52,18 @@ struct SidebarView: View {
             .collapsible(false)
         }
         .onChange(of: library.selectedFeed) {
-            if let feed = library.selectedFeed {
-                RSSParser.fetchArticles(from: feed.url)
-                    .receive(on: DispatchQueue.main)
-                    .sink(receiveCompletion: { completion in
-                        if case .failure(let error) = completion {
-                            // Implement logic for fail in fetching articles
-                            print("Failed to fetch articles: \(error)")
-                        }
-                    }, receiveValue: { articles in
-                        library.articles = articles
-                    })
-                    .store(in: &cancellables)
-            } else {
-                library.articles = []
+            if !library.isMoving {
+                library.fetchArticles()
+            }
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button(action: {
+                    library.addFeed = Feed()
+                }) {
+                    Label("Add Feed", systemImage: "plus")
+                }
+                .help("Add Feed")
             }
         }
     }
