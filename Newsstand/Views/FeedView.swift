@@ -9,14 +9,18 @@ import SwiftUI
 
 struct FeedView: View {
     @EnvironmentObject var library: Library
+    
+    let feed: Feed?
 
     var body: some View {
-        if library.selectedFeed != nil {
-            List(selection: $library.selectedArticle) {
-                ForEach(library.filteredArticles) { article in
-                    NavigationLink(
-                        value: article
-                    ) {
+        if let feed = library.feeds.first(where: { $0.id == feed?.id }) {
+            List {
+                ForEach(library.search(feed: feed, search: library.searchQuery)) { article in
+                    NavigationLink {
+                        ArticleView(article: article)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .edgesIgnoringSafeArea(.all)
+                    } label: {
                         VStack(spacing: 0) {
                             Text(article.title)
                                 .font(.headline)
@@ -38,13 +42,14 @@ struct FeedView: View {
             .toolbar {
                 ToolbarItem(placement: .navigation) {
                     Button(action: {
-                        library.refreshArticles()
+                        library.fetchArticles(for: feed)
                     }) {
                         Label("Refresh Feed", systemImage: "arrow.clockwise")
                     }
                     .help("Refresh Feed")
                 }
             }
+            .navigationSubtitle(feed.name)
         } else {
             Text("Select a feed")
                 .font(.title3)
@@ -56,6 +61,6 @@ struct FeedView: View {
 }
 
 #Preview {
-    return FeedView()
+    return FeedView(feed: nil)
         .environmentObject(Library())
 }

@@ -11,17 +11,17 @@ struct SidebarView: View {
     @EnvironmentObject var library: Library
 
     var body: some View {
-        List(selection: $library.selectedFeed) {
+        List {
             Section {
                 ForEach(library.feeds) { feed in
-                    NavigationLink(
-                        value: feed
-                    ) {
+                    NavigationLink {
+                        FeedView(feed: feed)
+                            .navigationSplitViewColumnWidth(min: library.feedWidth, ideal: library.feedWidth, max: .infinity)
+                    } label: {
                         HStack {
                             Image(systemName: "dot.radiowaves.up.forward")
                                 .resizable()
                                 .frame(width: 16, height: 16)
-                                .foregroundColor(library.selectedFeed == feed ? .white : .accentColor)
                             Text(feed.name)
                                 .truncationMode(.tail)
                                 .lineLimit(1)
@@ -50,13 +50,6 @@ struct SidebarView: View {
                     .padding(.vertical, 4)
             }
             .collapsible(false)
-        }
-        .onChange(of: library.selectedFeed) {
-            if !library.isMoving {
-                library.fetchArticles()
-                library.searchQuery = ""
-                library.selectedArticle = nil
-            }
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {

@@ -8,16 +8,16 @@
 import Foundation
 import Combine
 
-@MainActor
 class Library: ObservableObject, Identifiable {
+    @Published var sidebarWidth: CGFloat = 272
+    @Published var feedWidth: CGFloat = 350
+    
     @Published var feeds: [Feed] = []
-    @Published var articles: [Article] = []
     
     @Published var addFeed: Feed?
     @Published var editFeed: Feed?
     
-    @Published var selectedFeed: Feed?
-    @Published var selectedArticle: Article?
+    @Published var searchQuery: String = ""
     
     private let userDefaultsKey = "savedFeeds"
     
@@ -28,31 +28,60 @@ class Library: ObservableObject, Identifiable {
     }
 
     func load() {
-        guard let feeds = UserDefaults.standard.array(forKey: userDefaultsKey) as? [[String: String]] else { return }
+        guard let savedFeeds = UserDefaults.standard.array(forKey: userDefaultsKey) as? [[String: String]] else { return }
         
-        self.feeds = feeds.compactMap { feed in
-            if let idString = feed["id"],
-               let id = UUID(uuidString: idString),
-               let name = feed["name"],
-               let url = feed["url"] {
-                return Feed(id: id, name: name, url: url)
+        let loadedFeeds = savedFeeds.compactMap { feedDict -> Feed? in
+            guard let idString = feedDict["id"],
+                  let id = UUID(uuidString: idString),
+                  let name = feedDict["name"],
+                  let url = feedDict["url"] else {
+                return nil
             }
-            return nil
+            return Feed(id: id, name: name, url: url)
         }
+        
+        self.feeds = loadedFeeds
+
+        let articleFetchPublishers = loadedFeeds.map { feed in
+            RSSParser.fetchArticles(from: feed.url)
+                .map { articles in
+                    (feed, articles)
+                }
+                .catch { _ in Just((feed, [])) }
+                .eraseToAnyPublisher()
+        }
+        Publishers.MergeMany(articleFetchPublishers)
+            .collect()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] results in
+                for (feed, articles) in results {
+                    if let index = self?.feeds.firstIndex(where: { $0.id == feed.id }) {
+                        self?.feeds[index].articles = articles
+                    }
+                }
+            }
+            .store(in: &cancellables)
     }
 
     func add(_ addFeed: Feed) {
         DispatchQueue.main.async {
             self.feeds.append(addFeed)
             self.save()
+            self.fetchArticles(for: addFeed)
         }
     }
 
     func edit(_ editFeed: Feed) {
         DispatchQueue.main.async {
             if let index = self.feeds.firstIndex(where: { $0.id == editFeed.id }) {
+                let originalFeed = self.feeds[index]
+                
                 self.feeds[index] = editFeed
                 self.save()
+                
+                if originalFeed.url != editFeed.url {
+                    self.fetchArticles(for: editFeed)
+                }
             }
         }
     }
@@ -70,69 +99,44 @@ class Library: ObservableObject, Identifiable {
     func delete(feed: Feed) {
         DispatchQueue.main.async {
             self.feeds.removeAll(where: { $0.id == feed.id })
-            if self.selectedFeed == feed {
-                self.selectedFeed = nil
-                self.selectedArticle = nil
-            }
             self.save()
         }
     }
     
-    @Published var isMoving: Bool = false
-    
     func move(fromOffsets indices: IndexSet, toOffset newOffset: Int) {
-        isMoving = true
-        self.feeds.move(fromOffsets: indices, toOffset: newOffset)
-        self.save()
-        isMoving = false
+        DispatchQueue.main.async {
+            self.feeds.move(fromOffsets: indices, toOffset: newOffset)
+            self.save()
+        }
     }
 
-    func fetchArticles() {
-        if let feed = self.selectedFeed {
-            RSSParser.fetchArticles(from: feed.url)
-                .receive(on: DispatchQueue.main)
-                .sink(receiveCompletion: { completion in
-                    if case .failure(let error) = completion {
-                        // Implement logic for fail in fetching articles
-                        print("Failed to fetch articles: \(error)")
-                    }
-                }, receiveValue: { articles in
-                    self.articles = articles
-                })
-                .store(in: &cancellables)
-        } else {
-            self.articles = []
-        }
-    }
-    
-    func refreshArticles() {
-        guard let selectedFeed = self.selectedFeed else {
-            print("No feed selected")
-            return
-        }
-        
-        RSSParser.fetchArticles(from: selectedFeed.url)
+    func fetchArticles(for feed: Feed) {
+        RSSParser.fetchArticles(from: feed.url)
             .receive(on: DispatchQueue.main)
             .sink(receiveCompletion: { completion in
                 if case .failure(let error) = completion {
-                    print("Failed to refresh feed \(selectedFeed.name): \(error)")
+                    print("Failed to fetch articles for feed \(feed.name): \(error)")
                 }
-            }, receiveValue: { newArticles in
-                self.articles = newArticles
+            }, receiveValue: { articles in
+                if let index = self.feeds.firstIndex(where: { $0.id == feed.id }) {
+                    self.feeds[index].articles = articles
+                }
             })
             .store(in: &cancellables)
     }
-    
-    @Published var searchQuery: String = ""
         
-    var filteredArticles: [Article] {
-        if searchQuery.isEmpty {
-            return articles
+    func search(feed: Feed?, search: String) -> [Article] {
+        guard let feed = feed else { return [] }
+        
+        let articlesToFilter = feed.articles
+        
+        if search.isEmpty {
+            return articlesToFilter
         } else {
-            return articles.filter { article in
-                article.title.localizedCaseInsensitiveContains(searchQuery) ||
-                article.description.localizedCaseInsensitiveContains(searchQuery) ||
-                article.categories?.contains(where: { $0.localizedCaseInsensitiveContains(searchQuery) }) == true
+            return articlesToFilter.filter { article in
+                article.title.localizedCaseInsensitiveContains(search) ||
+                article.description.localizedCaseInsensitiveContains(search) ||
+                article.categories?.contains(where: { $0.localizedCaseInsensitiveContains(search) }) == true
             }
         }
     }

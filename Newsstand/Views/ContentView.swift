@@ -10,22 +10,24 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject var library: Library
 
-    let sidebarWidth: CGFloat = 272
-    let feedWidth: CGFloat = 350
-
     var body: some View {
         NavigationSplitView {
             SidebarView()
-                .navigationSplitViewColumnWidth(min: sidebarWidth, ideal: sidebarWidth, max: .infinity)
+                .navigationSplitViewColumnWidth(min: library.sidebarWidth, ideal: library.sidebarWidth, max: .infinity)
         } content: {
-            FeedView()
-                .navigationSplitViewColumnWidth(min: feedWidth, ideal: feedWidth, max: .infinity)
+            Text("Select a feed")
+                .font(.title3)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding()
         } detail: {
-            ArticleView()
+            Text("Select an article")
+                .font(.title3)
+                .foregroundColor(.secondary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .edgesIgnoringSafeArea(.all)
+                .multilineTextAlignment(.center)
+                .padding()
         }
-        .navigationSubtitle(library.selectedFeed?.name ?? "")
         .sheet(item: $library.addFeed) { feed in
             AddFeedView(feed: feed)
         }

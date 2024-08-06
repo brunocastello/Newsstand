@@ -10,15 +10,17 @@ import SwiftUI
 struct ArticleView: View {
     @EnvironmentObject var library: Library
     
+    let article: Article?
+    
     var body: some View {
         Group {
-            if let article = library.selectedArticle {
+            if let article = article {
                 WebView(
                     url: URL(string: "about:blank")!,
                     htmlContent: generateHTMLContent(for: article)
                 )
                 .edgesIgnoringSafeArea(.all)
-            } else if library.selectedFeed != nil {
+            } else {
                 Text("Select an article")
                     .font(.title3)
                     .foregroundColor(.secondary)
@@ -102,8 +104,7 @@ struct ArticleView: View {
 }
 
 #Preview {
-    let library = Library()
-    library.selectedArticle = Article(
+    let article = Article(
         title: "Here's to the crazy ones",
         description: "<p>The round pegs in the square holes. The ones who see things differently. They're not fond of rules. And they have no respect for the status quo. You can quote them, disagree with them, glorify or vilify them. About the only thing you can't do is ignore them. Because they change things. They push the human race forward. And while some may see them as the crazy ones, we see genius. Because the people who are crazy enough to think they can change the world, are the ones who do.</p>",
         link: "https://apple.com",
@@ -112,6 +113,6 @@ struct ArticleView: View {
         categories: ["Apple", "Steve Jobs"]
     )
 
-    return ArticleView()
-        .environmentObject(library)
+    return ArticleView(article: article)
+        .environmentObject(Library())
 }

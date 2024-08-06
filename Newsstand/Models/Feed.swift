@@ -11,6 +11,7 @@ struct Feed: Identifiable, Equatable, Hashable {
     var id = UUID()
     var name: String = ""
     var url: String = ""
+    var articles: [Article] = []
 
     func toDictionary() -> [String: String] {
         [
