@@ -21,7 +21,7 @@ struct ContentView: View {
             FeedView()
                 .navigationSplitViewColumnWidth(min: feedWidth, ideal: feedWidth, max: .infinity)
         } detail: {
-            ArticleView(article: library.selectedArticle)
+            ArticleView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .edgesIgnoringSafeArea(.all)
         }

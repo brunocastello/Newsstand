@@ -54,6 +54,8 @@ struct SidebarView: View {
         .onChange(of: library.selectedFeed) {
             if !library.isMoving {
                 library.fetchArticles()
+                library.searchQuery = ""
+                library.selectedArticle = nil
             }
         }
         .toolbar {

@@ -12,24 +12,26 @@ struct FeedView: View {
 
     var body: some View {
         if library.selectedFeed != nil {
-            List(library.filteredArticles, id: \.id) { article in
-                NavigationLink(
-                    value: article
-                ) {
-                    VStack(spacing: 0) {
-                        Text(article.title)
-                            .font(.headline)
-                            .truncationMode(.tail)
-                            .lineLimit(1)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.bottom,4)
-                        Text(article.pubDate)
-                            .font(.caption)
-                            .lineLimit(1)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .foregroundColor(.secondary)
+            List(selection: $library.selectedArticle) {
+                ForEach(library.filteredArticles) { article in
+                    NavigationLink(
+                        value: article
+                    ) {
+                        VStack(spacing: 0) {
+                            Text(article.title)
+                                .font(.headline)
+                                .truncationMode(.tail)
+                                .lineLimit(1)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.bottom,4)
+                            Text(article.pubDate)
+                                .font(.caption)
+                                .lineLimit(1)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(EdgeInsets(top: 5, leading: 5, bottom: 8, trailing: 5))
                     }
-                    .padding(EdgeInsets(top: 5, leading: 5, bottom: 8, trailing: 5))
                 }
             }
             .searchable(text: $library.searchQuery)
@@ -42,11 +44,6 @@ struct FeedView: View {
                     }
                     .help("Refresh Feed")
                 }
-            }
-            .navigationDestination(for: Article.self) { article in
-                ArticleView(article: article)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .edgesIgnoringSafeArea(.all)
             }
         } else {
             Text("Select a feed")
