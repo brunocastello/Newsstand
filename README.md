@@ -28,7 +28,7 @@ Runs on port 80. `sudo` is required to bind to a privileged port.
 **2. On the Mac OS 9 machine**, redirect `www.getnewsstand.com` to your server's IP by editing the Hosts file:
 
 - Open **TCP/IP** control panel → select **Hosts** file
-- Add: `www.getnewsstand.com  <your-server-ip>`
+- Add: `www.getnewsstand.com A <your-server-ip>`
 
 Or, if using SheepShaver/Basilisk II, edit the host machine's `/etc/hosts`.
 
